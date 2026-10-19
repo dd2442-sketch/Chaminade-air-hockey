@@ -1,0 +1,1253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chaminade High School Air Hockey</title>
+    <!-- Tailwind CSS for UI controls and layout -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for UI Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts for custom styling -->
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;800;900&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Montserrat', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            background-color: #0b0f19;
+            color: #ffffff;
+            overflow: hidden;
+        }
+
+        /* Custom Chaminade Color Palette */
+        .bg-chaminade-crimson { background-color: #800020; }
+        .text-chaminade-crimson { color: #800020; }
+        .border-chaminade-crimson { border-color: #800020; }
+
+        .bg-chaminade-gold { background-color: #FFD700; }
+        .text-chaminade-gold { color: #FFD700; }
+        .border-chaminade-gold { border-color: #FFD700; }
+
+        /* Canvas styling */
+        #gameCanvas {
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.85), 0 0 35px rgba(255, 215, 0, 0.25);
+            border-radius: 24px;
+            cursor: none; /* Hide default cursor over canvas */
+        }
+
+        /* Glassmorphism UI panel */
+        .glass-panel {
+            background: rgba(18, 10, 16, 0.85);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        /* Confetti canvas overlay */
+        #confettiCanvas {
+            pointer-events: none;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 60;
+        }
+
+        /* Animated Menu Backdrop */
+        .menu-bg-gradient {
+            background: radial-gradient(circle at 50% 30%, #4a0013 0%, #1a0006 50%, #080306 100%);
+        }
+
+        /* Custom pulse glow */
+        @keyframes goldGlow {
+            0%, 100% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.4); }
+            50% { box-shadow: 0 0 30px rgba(255, 215, 0, 0.8); }
+        }
+        .glow-gold {
+            animation: goldGlow 3s infinite ease-in-out;
+        }
+    </style>
+</head>
+<body class="w-screen h-screen flex flex-col justify-between items-center bg-slate-950 relative overflow-hidden">
+
+    <!-- Confetti canvas for victory celebrations -->
+    <canvas id="confettiCanvas"></canvas>
+
+    <!-- ==================== MAIN MENU SCREEN ==================== -->
+    <div id="mainMenu" class="fixed inset-0 z-50 flex flex-col justify-between items-center p-6 menu-bg-gradient transition-all duration-500">
+        
+        <!-- Header Crest & Title -->
+        <div class="flex flex-col items-center mt-4 text-center">
+            <div class="w-20 h-20 md:w-24 md:h-24 rounded-full bg-chaminade-crimson border-4 border-chaminade-gold flex items-center justify-center font-black text-chaminade-gold text-4xl md:text-5xl shadow-2xl mb-3 glow-gold">
+                C
+            </div>
+            <h1 class="text-3xl md:text-5xl font-black tracking-wider text-chaminade-gold leading-none drop-shadow-md">
+                CHAMINADE AIR HOCKEY
+            </h1>
+            <p class="text-xs md:text-sm font-bold text-red-200 tracking-widest uppercase mt-1">
+                Cafeteria Arena • Mineola, Long Island
+            </p>
+        </div>
+
+        <!-- Main Navigation Options Container -->
+        <div class="w-full max-w-md space-y-3.5 my-auto">
+            
+            <!-- 1P VS AI Button -->
+            <button id="btnMenuSingle" class="w-full py-4 px-6 rounded-2xl glass-panel hover:bg-red-950/60 border border-yellow-500/40 text-left flex items-center justify-between group transition-all duration-200 hover:scale-[1.02] shadow-xl">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-chaminade-crimson border border-chaminade-gold/50 flex items-center justify-center text-chaminade-gold text-xl group-hover:scale-110 transition">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div>
+                        <div class="font-extrabold text-lg text-white group-hover:text-chaminade-gold transition">Single Player vs AI</div>
+                        <div class="text-xs text-gray-300">Challenge the Flyer AI with custom difficulty</div>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-chaminade-gold opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition"></i>
+            </button>
+
+            <!-- Local 2 Player Button -->
+            <button id="btnMenuLocal" class="w-full py-4 px-6 rounded-2xl glass-panel hover:bg-red-950/60 border border-yellow-500/40 text-left flex items-center justify-between group transition-all duration-200 hover:scale-[1.02] shadow-xl">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-yellow-500 border border-chaminade-gold flex items-center justify-center text-slate-950 text-xl group-hover:scale-110 transition">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div>
+                        <div class="font-extrabold text-lg text-white group-hover:text-chaminade-gold transition">Local 2 Players</div>
+                        <div class="text-xs text-gray-300">Head-to-head on the same screen</div>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-chaminade-gold opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition"></i>
+            </button>
+
+            <!-- Create / Join Online Room -->
+            <button id="btnMenuOnline" class="w-full py-4 px-6 rounded-2xl glass-panel hover:bg-red-950/60 border border-yellow-500/40 text-left flex items-center justify-between group transition-all duration-200 hover:scale-[1.02] shadow-xl">
+                <div class="flex items-center gap-4">
+                    <div class="w-12 h-12 rounded-xl bg-blue-700 border border-blue-400 flex items-center justify-center text-white text-xl group-hover:scale-110 transition">
+                        <i class="fas fa-globe"></i>
+                    </div>
+                    <div>
+                        <div class="font-extrabold text-lg text-white group-hover:text-chaminade-gold transition">Host / Join Room</div>
+                        <div class="text-xs text-gray-300">Create a room code and invite a friend</div>
+                    </div>
+                </div>
+                <i class="fas fa-chevron-right text-chaminade-gold opacity-60 group-hover:opacity-100 group-hover:translate-x-1 transition"></i>
+            </button>
+
+            <!-- How To Play Button -->
+            <button id="btnMenuHowTo" class="w-full py-3.5 px-6 rounded-2xl glass-card hover:bg-white/10 text-left flex items-center justify-between group transition-all duration-200">
+                <div class="flex items-center gap-4">
+                    <div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-chaminade-gold text-lg">
+                        <i class="fas fa-question-circle"></i>
+                    </div>
+                    <div class="font-bold text-sm text-gray-200 group-hover:text-white">How To Play & Controls</div>
+                </div>
+                <i class="fas fa-chevron-right text-gray-400 group-hover:text-white transition"></i>
+            </button>
+
+        </div>
+
+        <!-- Footer / Sound & Audio Quick Toggle -->
+        <div class="w-full max-w-md flex justify-between items-center text-xs text-gray-400 pt-4 border-t border-white/10">
+            <span>Fortes in Fide • Chaminade High School</span>
+            <button id="btnMenuAudioToggle" class="flex items-center gap-2 hover:text-chaminade-gold transition">
+                <i class="fas fa-volume-up text-chaminade-gold"></i> Sound: ON
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== SUB-PANELS (Modals inside Menu) ==================== -->
+
+    <!-- Difficulty Selection Panel (For Single Player) -->
+    <div id="diffPanel" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel max-w-sm w-full p-6 rounded-3xl text-center border-2 border-chaminade-gold/50 shadow-2xl relative">
+            <h3 class="text-2xl font-black text-chaminade-gold mb-1">SELECT DIFFICULTY</h3>
+            <p class="text-xs text-gray-300 mb-6">Choose your AI opponent standard</p>
+
+            <div class="space-y-3 mb-6">
+                <button class="diff-select-btn w-full py-3 rounded-xl bg-green-900/50 hover:bg-green-800 border border-green-500/50 font-bold text-green-200 transition" data-diff="easy">
+                    <i class="fas fa-leaf mr-2"></i> Easy (Freshman)
+                </button>
+                <button class="diff-select-btn w-full py-3 rounded-xl bg-yellow-900/50 hover:bg-yellow-800 border border-yellow-500/50 font-bold text-yellow-200 transition" data-diff="medium">
+                    <i class="fas fa-graduation-cap mr-2"></i> Medium (Varsity)
+                </button>
+                <button class="diff-select-btn w-full py-3 rounded-xl bg-red-900/50 hover:bg-red-800 border border-red-500/50 font-bold text-red-200 transition" data-diff="hard">
+                    <i class="fas fa-fire mr-2"></i> Hard (Champion)
+                </button>
+            </div>
+
+            <button id="btnCloseDiff" class="w-full py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 font-bold text-sm transition">
+                Back to Main Menu
+            </button>
+        </div>
+    </div>
+
+    <!-- Online Lobby Room Setup Panel -->
+    <div id="onlinePanel" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-3xl text-center border-2 border-chaminade-gold/50 shadow-2xl relative">
+            <h3 class="text-2xl font-black text-chaminade-gold mb-1">MULTIPLAYER ROOM</h3>
+            <p class="text-xs text-gray-300 mb-6">Host or join a Cafeteria match with a room code</p>
+
+            <!-- Tab Buttons -->
+            <div class="flex rounded-xl bg-slate-900/80 p-1 mb-6 border border-white/10">
+                <button id="tabHost" class="flex-1 py-2 rounded-lg font-bold text-sm bg-chaminade-crimson text-white transition">Host Room</button>
+                <button id="tabJoin" class="flex-1 py-2 rounded-lg font-bold text-sm text-gray-400 hover:text-white transition">Join Room</button>
+            </div>
+
+            <!-- Host Room Section -->
+            <div id="secHost" class="space-y-4 mb-6">
+                <div class="bg-slate-900/60 p-4 rounded-2xl border border-white/10">
+                    <span class="text-xs uppercase font-bold text-gray-400 block mb-1">Your Room Code</span>
+                    <div id="generatedRoomCode" class="text-3xl font-black tracking-widest text-chaminade-gold select-all font-mono">FLYERS123</div>
+                </div>
+                <div class="flex items-center justify-center gap-2 text-xs text-yellow-300">
+                    <i class="fas fa-spinner fa-spin"></i> Waiting for opponent to join...
+                </div>
+            </div>
+
+            <!-- Join Room Section -->
+            <div id="secJoin" class="space-y-4 mb-6 hidden">
+                <div class="bg-slate-900/60 p-4 rounded-2xl border border-white/10 text-left">
+                    <label class="text-xs uppercase font-bold text-gray-400 block mb-2">Enter Room Code</label>
+                    <input id="inputRoomCode" type="text" placeholder="e.g. FLYERS123" class="w-full px-4 py-3 rounded-xl bg-black/50 border border-yellow-500/40 text-center text-xl font-mono text-chaminade-gold uppercase focus:outline-none focus:border-chaminade-gold">
+                </div>
+                <button id="btnJoinStart" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-yellow-600 to-yellow-500 text-slate-950 font-black text-base hover:brightness-110 transition">
+                    JOIN & START MATCH
+                </button>
+            </div>
+
+            <div class="flex gap-3">
+                <button id="btnHostStart" class="flex-1 py-3 rounded-xl bg-chaminade-crimson hover:bg-red-900 text-white font-bold transition">
+                    Launch Match
+                </button>
+                <button id="btnCloseOnline" class="py-3 px-5 rounded-xl bg-white/10 hover:bg-white/20 text-gray-300 font-bold transition">
+                    Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- How To Play Instructions Modal -->
+    <div id="howToPanel" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+        <div class="glass-panel max-w-md w-full p-6 rounded-3xl text-left border-2 border-chaminade-gold/50 shadow-2xl relative">
+            <h3 class="text-2xl font-black text-chaminade-gold mb-1 text-center">HOW TO PLAY</h3>
+            <p class="text-xs text-gray-300 mb-4 text-center">Chaminade High School Air Hockey Rules</p>
+
+            <div class="space-y-3 text-xs text-gray-200 mb-6 max-h-60 overflow-y-auto pr-2">
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-white/10 flex items-start gap-3">
+                    <i class="fas fa-hand-pointer text-chaminade-gold text-base mt-0.5"></i>
+                    <div>
+                        <strong class="text-white block">Controls:</strong>
+                        Move mouse or drag touch on your side of the table to push your mallet.
+                    </div>
+                </div>
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-white/10 flex items-start gap-3">
+                    <i class="fas fa-trophy text-chaminade-gold text-base mt-0.5"></i>
+                    <div>
+                        <strong class="text-white block">Winning Condition:</strong>
+                        First player to score 7 goals wins the Cafeteria Trophy!
+                    </div>
+                </div>
+                <div class="bg-slate-900/60 p-3 rounded-xl border border-white/10 flex items-start gap-3">
+                    <i class="fas fa-shield-alt text-chaminade-gold text-base mt-0.5"></i>
+                    <div>
+                        <strong class="text-white block">Defense & Speed:</strong>
+                        Defend your goal slit! Strike the puck with momentum for high-velocity shots.
+                    </div>
+                </div>
+            </div>
+
+            <button id="btnCloseHowTo" class="w-full py-3 rounded-xl bg-chaminade-crimson hover:bg-red-900 text-white font-bold transition">
+                Got It, Let's Play!
+            </button>
+        </div>
+    </div>
+
+    <!-- ==================== IN-GAME HUD HEADER ==================== -->
+    <header class="w-full max-w-4xl px-4 pt-3 pb-1 z-10 flex justify-between items-center">
+        <!-- Chaminade Branding -->
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 md:w-12 md:h-12 rounded-full bg-chaminade-crimson border-2 border-chaminade-gold flex items-center justify-center font-black text-chaminade-gold text-xl md:text-2xl shadow-lg">
+                C
+            </div>
+            <div>
+                <h1 class="text-base md:text-xl font-extrabold tracking-wider text-chaminade-gold leading-none">CHAMINADE</h1>
+                <p id="hudSubTitle" class="text-[10px] md:text-xs font-semibold text-red-200 tracking-widest uppercase">Cafeteria Arena</p>
+            </div>
+        </div>
+
+        <!-- Live Score Display -->
+        <div class="glass-panel px-5 py-2 rounded-2xl flex items-center gap-5 shadow-2xl border border-yellow-500/30">
+            <!-- Opponent / P2 Score -->
+            <div class="text-center">
+                <span id="labelScoreOpponent" class="text-[10px] uppercase font-bold text-gray-300 block">AI</span>
+                <span id="aiScore" class="text-2xl md:text-3xl font-black text-yellow-400">0</span>
+            </div>
+            <div class="text-xl md:text-2xl font-black text-red-500/50">:</div>
+            <!-- Player Score -->
+            <div class="text-center">
+                <span class="text-[10px] uppercase font-bold text-gray-300 block">Player 1</span>
+                <span id="playerScore" class="text-2xl md:text-3xl font-black text-red-500">0</span>
+            </div>
+        </div>
+
+        <!-- Controls / Buttons -->
+        <div class="flex items-center gap-2">
+            <button id="btnSoundHUD" class="glass-panel hover:bg-white/10 w-10 h-10 rounded-xl flex items-center justify-center text-chaminade-gold transition">
+                <i class="fas fa-volume-up"></i>
+            </button>
+            <button id="btnPauseHUD" class="glass-panel hover:bg-white/10 w-10 h-10 rounded-xl flex items-center justify-center text-chaminade-gold transition">
+                <i class="fas fa-pause"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Game Canvas Container -->
+    <main class="relative flex-1 w-full flex items-center justify-center p-2 z-10">
+        <canvas id="gameCanvas"></canvas>
+    </main>
+
+    <!-- Bottom Info Bar -->
+    <footer class="w-full max-w-4xl px-4 pb-3 z-10 flex justify-between items-center text-xs text-gray-400">
+        <div id="hudModeInfo" class="glass-panel px-3 py-1.5 rounded-xl text-chaminade-gold font-bold">
+            1P Mode • Easy
+        </div>
+        <div class="glass-panel px-3 py-1.5 rounded-xl text-center">
+            First to <span class="text-chaminade-gold font-bold">7 Goals</span>
+        </div>
+    </footer>
+
+    <!-- ==================== IN-GAME PAUSE & GAME OVER MODAL ==================== -->
+    <div id="modalOverlay" class="fixed inset-0 bg-black/80 backdrop-blur-md z-50 hidden items-center justify-center p-4 transition-opacity duration-300">
+        <div class="glass-panel max-w-md w-full p-8 rounded-3xl text-center border-2 border-chaminade-gold/50 shadow-2xl relative overflow-hidden">
+            <!-- Background Decorative Badge -->
+            <div class="absolute -right-10 -bottom-10 opacity-10 text-9xl font-black text-chaminade-gold pointer-events-none">
+                C
+            </div>
+
+            <h2 id="modalTitle" class="text-3xl font-black text-chaminade-gold mb-2 tracking-wide">PAUSED</h2>
+            <p id="modalSubtitle" class="text-sm text-gray-300 mb-6">Match is currently paused</p>
+
+            <div class="space-y-3 mb-6">
+                <button id="modalResumeBtn" class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-red-800 to-yellow-600 text-white font-extrabold text-lg shadow-lg hover:brightness-110 transition">
+                    RESUME MATCH
+                </button>
+                <button id="modalRestartBtn" class="w-full py-3 rounded-2xl bg-white/10 hover:bg-white/20 text-white font-bold transition">
+                    Restart Match
+                </button>
+                <button id="modalMenuBtn" class="w-full py-3 rounded-2xl bg-red-950/80 hover:bg-red-900 text-red-200 border border-red-500/30 font-bold transition">
+                    Exit to Main Menu
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Web Audio Synthesizer Engine & Game Logic -->
+    <script>
+        // --- Web Audio API Sound Synthesizer ---
+        class SoundFX {
+            constructor() {
+                this.ctx = null;
+                this.muted = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+            }
+
+            playHit(volume = 0.5) {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(320, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(80, this.ctx.currentTime + 0.08);
+
+                gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.08);
+            }
+
+            playWallBounce(volume = 0.3) {
+                if (this.muted || !this.ctx) return;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(40, this.ctx.currentTime + 0.05);
+
+                gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.05);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(this.ctx.currentTime + 0.05);
+            }
+
+            playGoal() {
+                if (this.muted || !this.ctx) return;
+                const now = this.ctx.currentTime;
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+
+                osc.type = 'square';
+                osc.frequency.setValueAtTime(440, now);
+                osc.frequency.setValueAtTime(554.37, now + 0.1); // C#5
+                osc.frequency.setValueAtTime(659.25, now + 0.2); // E5
+                osc.frequency.setValueAtTime(880, now + 0.3);    // A5
+
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start();
+                osc.stop(now + 0.6);
+            }
+
+            playWin() {
+                if (this.muted || !this.ctx) return;
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C E G C
+                notes.forEach((freq, idx) => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    const start = this.ctx.currentTime + idx * 0.12;
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(freq, start);
+
+                    gain.gain.setValueAtTime(0.4, start);
+                    gain.gain.exponentialRampToValueAtTime(0.01, start + 0.3);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+
+                    osc.start(start);
+                    osc.stop(start + 0.3);
+                });
+            }
+        }
+
+        const sound = new SoundFX();
+
+        // --- Main Game State Setup ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const confettiCanvas = document.getElementById('confettiCanvas');
+        const confettiCtx = confettiCanvas.getContext('2d');
+
+        // Game Control Flags
+        let isPaused = false;
+        let isGameOver = false;
+        let isStarted = false;
+        let gameMode = 'ai'; // 'ai', 'local', 'online'
+        let roomCode = 'FLYERS123';
+        let difficulty = 'easy'; // easy, medium, hard
+
+        let playerScore = 0;
+        let aiScore = 0;
+        const WINNING_SCORE = 7;
+
+        // Table dimensions & scaling
+        let tableWidth, tableHeight, tableX, tableY;
+        let tableRadius = 24;
+
+        // Entities
+        let puck, player, ai;
+
+        // AI Configuration
+        const AI_CONFIG = {
+            easy: { speed: 4.8, reaction: 0.09, errorMargin: 30 },
+            medium: { speed: 7.8, reaction: 0.16, errorMargin: 12 },
+            hard: { speed: 12.0, reaction: 0.29, errorMargin: 1 }
+        };
+
+        // Particles
+        let particles = [];
+
+        // Resize Canvas dynamically maintaining Air Hockey Ratio (approx 1:1.8)
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const maxWidth = container.clientWidth - 10;
+            const maxHeight = container.clientHeight - 10;
+
+            const aspectRatio = 0.58;
+
+            let w = maxWidth;
+            let h = w / aspectRatio;
+
+            if (h > maxHeight) {
+                h = maxHeight;
+                w = h * aspectRatio;
+            }
+
+            canvas.width = w;
+            canvas.height = h;
+
+            confettiCanvas.width = window.innerWidth;
+            confettiCanvas.height = window.innerHeight;
+
+            tableWidth = canvas.width * 0.88;
+            tableHeight = canvas.height * 0.92;
+            tableX = (canvas.width - tableWidth) / 2;
+            tableY = (canvas.height - tableHeight) / 2;
+
+            initEntities();
+        }
+
+        function initEntities() {
+            const malletRadius = tableWidth * 0.08;
+            const puckRadius = tableWidth * 0.055;
+
+            player = {
+                x: canvas.width / 2,
+                y: tableY + tableHeight * 0.8,
+                vx: 0,
+                vy: 0,
+                lastX: canvas.width / 2,
+                lastY: tableY + tableHeight * 0.8,
+                radius: malletRadius,
+                color: '#800020', // Crimson
+                accent: '#FFD700'  // Gold
+            };
+
+            ai = {
+                x: canvas.width / 2,
+                y: tableY + tableHeight * 0.2,
+                vx: 0,
+                vy: 0,
+                lastX: canvas.width / 2,
+                lastY: tableY + tableHeight * 0.2,
+                radius: malletRadius,
+                color: '#002B49', // Deep Blue
+                accent: '#FFD700'
+            };
+
+            puck = {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                vx: 0,
+                vy: 0,
+                radius: puckRadius,
+                friction: 0.988,
+                maxSpeed: tableWidth * 0.065
+            };
+        }
+
+        function resetPuck(scorer) {
+            puck.x = canvas.width / 2;
+            puck.y = scorer === 'player' ? tableY + tableHeight * 0.35 : tableY + tableHeight * 0.65;
+            puck.vx = 0;
+            puck.vy = 0;
+
+            player.x = canvas.width / 2;
+            player.y = tableY + tableHeight * 0.8;
+            ai.x = canvas.width / 2;
+            ai.y = tableY + tableHeight * 0.2;
+        }
+
+        // --- Drawing Operations ---
+        function drawCafeteriaBackground() {
+            const bgGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            bgGrad.addColorStop(0, '#111827');
+            bgGrad.addColorStop(0.5, '#1e1b4b');
+            bgGrad.addColorStop(1, '#0f172a');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Tile Floor Grid
+            ctx.save();
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.lineWidth = 1.5;
+            const tileSize = canvas.width / 12;
+            for (let x = 0; x < canvas.width; x += tileSize) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for (let y = 0; y < canvas.height; y += tileSize) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            ctx.restore();
+
+            // Chaminade Wall Banners
+            drawBanner(canvas.width * 0.12, 12, 'FLYERS', '#800020');
+            drawBanner(canvas.width * 0.88, 12, 'CHAMINADE', '#800020');
+        }
+
+        function drawBanner(x, y, text, color) {
+            ctx.save();
+            ctx.translate(x, y);
+
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+            ctx.shadowBlur = 8;
+
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(-35, 0);
+            ctx.lineTo(35, 0);
+            ctx.lineTo(35, 45);
+            ctx.lineTo(0, 60);
+            ctx.lineTo(-35, 45);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            ctx.fillStyle = '#FFD700';
+            ctx.font = '900 9px Montserrat';
+            ctx.textAlign = 'center';
+            ctx.fillText(text, 0, 25);
+
+            ctx.restore();
+        }
+
+        function drawAirHockeyTable() {
+            ctx.save();
+
+            // Table Casing Shadow
+            ctx.shadowColor = 'rgba(0,0,0,0.7)';
+            ctx.shadowBlur = 25;
+            ctx.shadowOffsetY = 12;
+
+            // Frame
+            ctx.fillStyle = '#1c1917';
+            ctx.beginPath();
+            ctx.roundRect(tableX - 16, tableY - 16, tableWidth + 32, tableHeight + 32, tableRadius + 8);
+            ctx.fill();
+
+            // Crimson Outer Rail Accent
+            ctx.shadowColor = 'transparent';
+            ctx.fillStyle = '#800020';
+            ctx.beginPath();
+            ctx.roundRect(tableX - 8, tableY - 8, tableWidth + 16, tableHeight + 16, tableRadius + 4);
+            ctx.fill();
+
+            // Playing Surface
+            const surfaceGrad = ctx.createLinearGradient(tableX, tableY, tableX + tableWidth, tableY + tableHeight);
+            surfaceGrad.addColorStop(0, '#f8fafc');
+            surfaceGrad.addColorStop(0.5, '#f1f5f9');
+            surfaceGrad.addColorStop(1, '#e2e8f0');
+            ctx.fillStyle = surfaceGrad;
+            ctx.beginPath();
+            ctx.roundRect(tableX, tableY, tableWidth, tableHeight, tableRadius);
+            ctx.fill();
+
+            // Surface Dots (Air holes)
+            ctx.fillStyle = 'rgba(0,0,0,0.03)';
+            const gridStep = 22;
+            for (let hx = tableX + 15; hx < tableX + tableWidth - 10; hx += gridStep) {
+                for (let hy = tableY + 15; hy < tableY + tableHeight - 10; hy += gridStep) {
+                    ctx.fillRect(hx, hy, 1.5, 1.5);
+                }
+            }
+
+            // Table Markings
+            const goalWidth = tableWidth * 0.42;
+            const goalX = canvas.width / 2 - goalWidth / 2;
+
+            // Center Line
+            ctx.strokeStyle = '#800020';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.moveTo(tableX, canvas.height / 2);
+            ctx.lineTo(tableX + tableWidth, canvas.height / 2);
+            ctx.stroke();
+
+            // Center Circle
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, tableWidth * 0.18, 0, Math.PI * 2);
+            ctx.strokeStyle = '#800020';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Gold Ring
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, tableWidth * 0.08, 0, Math.PI * 2);
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Chaminade "C" Emblem
+            ctx.fillStyle = 'rgba(128, 0, 32, 0.15)';
+            ctx.font = `900 ${tableWidth * 0.15}px Montserrat`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('C', canvas.width / 2, canvas.height / 2);
+
+            // Goal Creases
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, tableY, goalWidth / 2, 0, Math.PI);
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, tableY + tableHeight, goalWidth / 2, Math.PI, 0);
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Goal Slots
+            ctx.fillStyle = '#090d16';
+            ctx.fillRect(goalX, tableY - 12, goalWidth, 12);
+            ctx.fillRect(goalX, tableY + tableHeight, goalWidth, 12);
+
+            ctx.restore();
+        }
+
+        function drawPuck() {
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.35)';
+            ctx.shadowBlur = 8;
+            ctx.shadowOffsetX = 4;
+            ctx.shadowOffsetY = 4;
+
+            const puckGrad = ctx.createRadialGradient(puck.x - 2, puck.y - 2, puck.radius * 0.2, puck.x, puck.y, puck.radius);
+            puckGrad.addColorStop(0, '#334155');
+            puckGrad.addColorStop(0.7, '#0f172a');
+            puckGrad.addColorStop(1, '#020617');
+
+            ctx.fillStyle = puckGrad;
+            ctx.beginPath();
+            ctx.arc(puck.x, puck.y, puck.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.shadowColor = '#FFD700';
+            ctx.shadowBlur = 6;
+            ctx.strokeStyle = '#FFD700';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(puck.x, puck.y, puck.radius * 0.55, 0, Math.PI * 2);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        function drawMallet(mallet) {
+            ctx.save();
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+            ctx.shadowBlur = 10;
+            ctx.shadowOffsetY = 5;
+
+            const baseGrad = ctx.createRadialGradient(mallet.x - 3, mallet.y - 3, mallet.radius * 0.1, mallet.x, mallet.y, mallet.radius);
+            baseGrad.addColorStop(0, mallet.color);
+            baseGrad.addColorStop(0.85, mallet.color);
+            baseGrad.addColorStop(1, '#000000');
+
+            ctx.fillStyle = baseGrad;
+            ctx.beginPath();
+            ctx.arc(mallet.x, mallet.y, mallet.radius, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.strokeStyle = mallet.accent;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(mallet.x, mallet.y, mallet.radius * 0.65, 0, Math.PI * 2);
+            ctx.stroke();
+
+            const knobGrad = ctx.createRadialGradient(mallet.x - 2, mallet.y - 2, 2, mallet.x, mallet.y, mallet.radius * 0.35);
+            knobGrad.addColorStop(0, '#ffffff');
+            knobGrad.addColorStop(0.4, mallet.accent);
+            knobGrad.addColorStop(1, '#996515');
+
+            ctx.fillStyle = knobGrad;
+            ctx.beginPath();
+            ctx.arc(mallet.x, mallet.y, mallet.radius * 0.35, 0, Math.PI * 2);
+            ctx.fill();
+
+            ctx.restore();
+        }
+
+        // --- Physics Engine ---
+        function updatePhysics() {
+            if (isPaused || isGameOver || !isStarted) return;
+
+            // Player 1 Velocity Tracking
+            player.vx = player.x - player.lastX;
+            player.vy = player.y - player.lastY;
+            player.lastX = player.x;
+            player.lastY = player.y;
+
+            // Player 2 / AI Velocity Tracking
+            if (gameMode === 'local') {
+                ai.vx = ai.x - ai.lastX;
+                ai.vy = ai.y - ai.lastY;
+                ai.lastX = ai.x;
+                ai.lastY = ai.y;
+            } else if (gameMode === 'ai') {
+                updateAI();
+            }
+
+            // Puck Dynamics
+            puck.x += puck.vx;
+            puck.y += puck.vy;
+
+            puck.vx *= puck.friction;
+            puck.vy *= puck.friction;
+
+            const currSpeed = Math.hypot(puck.vx, puck.vy);
+            if (currSpeed > puck.maxSpeed) {
+                puck.vx = (puck.vx / currSpeed) * puck.maxSpeed;
+                puck.vy = (puck.vy / currSpeed) * puck.maxSpeed;
+            }
+
+            // Wall Collisions
+            const goalWidth = tableWidth * 0.42;
+            const goalLeft = canvas.width / 2 - goalWidth / 2;
+            const goalRight = canvas.width / 2 + goalWidth / 2;
+
+            if (puck.x - puck.radius < tableX) {
+                puck.x = tableX + puck.radius;
+                puck.vx *= -0.85;
+                sound.playWallBounce(Math.min(1, Math.abs(puck.vx) / 10));
+            }
+            if (puck.x + puck.radius > tableX + tableWidth) {
+                puck.x = tableX + tableWidth - puck.radius;
+                puck.vx *= -0.85;
+                sound.playWallBounce(Math.min(1, Math.abs(puck.vx) / 10));
+            }
+
+            // Top Goal Check
+            if (puck.y - puck.radius < tableY) {
+                if (puck.x > goalLeft && puck.x < goalRight) {
+                    handleGoal('player');
+                    return;
+                } else {
+                    puck.y = tableY + puck.radius;
+                    puck.vy *= -0.85;
+                    sound.playWallBounce(Math.min(1, Math.abs(puck.vy) / 10));
+                }
+            }
+
+            // Bottom Goal Check
+            if (puck.y + puck.radius > tableY + tableHeight) {
+                if (puck.x > goalLeft && puck.x < goalRight) {
+                    handleGoal('ai');
+                    return;
+                } else {
+                    puck.y = tableY + tableHeight - puck.radius;
+                    puck.vy *= -0.85;
+                    sound.playWallBounce(Math.min(1, Math.abs(puck.vy) / 10));
+                }
+            }
+
+            // Mallet Impact Collision
+            handleMalletCollision(player);
+            handleMalletCollision(ai);
+        }
+
+        function handleMalletCollision(mallet) {
+            const dx = puck.x - mallet.x;
+            const dy = puck.y - mallet.y;
+            const dist = Math.hypot(dx, dy);
+            const minDist = puck.radius + mallet.radius;
+
+            if (dist < minDist) {
+                const nx = dx / dist;
+                const ny = dy / dist;
+
+                const overlap = minDist - dist;
+                puck.x += nx * overlap;
+                puck.y += ny * overlap;
+
+                const kx = puck.vx - mallet.vx;
+                const ky = puck.vy - mallet.vy;
+
+                const p = 2 * (nx * kx + ny * ky) / 1.2;
+
+                puck.vx = puck.vx - p * nx + mallet.vx * 0.8;
+                puck.vy = puck.vy - p * ny + mallet.vy * 0.8;
+
+                const speed = Math.hypot(puck.vx, puck.vy);
+                if (speed < 3) {
+                    puck.vx = nx * 5;
+                    puck.vy = ny * 5;
+                }
+
+                sound.playHit(Math.min(1, Math.max(0.2, speed / 12)));
+            }
+        }
+
+        function updateAI() {
+            const config = AI_CONFIG[difficulty];
+            let targetX = canvas.width / 2;
+            let targetY = tableY + tableHeight * 0.2;
+
+            if (puck.y < canvas.height / 2 + 50) {
+                targetX = puck.x + (Math.sin(Date.now() / 200) * config.errorMargin);
+                targetY = puck.y - puck.radius;
+                targetY = Math.max(tableY + ai.radius, Math.min(canvas.height / 2 - ai.radius - 10, targetY));
+            } else {
+                targetX = canvas.width / 2 + (puck.x - canvas.width / 2) * 0.3;
+                targetY = tableY + tableHeight * 0.2;
+            }
+
+            const dx = targetX - ai.x;
+            const dy = targetY - ai.y;
+
+            ai.vx = dx * config.reaction;
+            ai.vy = dy * config.reaction;
+
+            const speed = Math.hypot(ai.vx, ai.vy);
+            if (speed > config.speed) {
+                ai.vx = (ai.vx / speed) * config.speed;
+                ai.vy = (ai.vy / speed) * config.speed;
+            }
+
+            ai.x += ai.vx;
+            ai.y += ai.vy;
+
+            ai.x = Math.max(tableX + ai.radius, Math.min(tableX + tableWidth - ai.radius, ai.x));
+            ai.y = Math.max(tableY + ai.radius, Math.min(canvas.height / 2 - ai.radius, ai.y));
+        }
+
+        // --- Goals & Scoring ---
+        function handleGoal(scorer) {
+            sound.playGoal();
+
+            if (scorer === 'player') {
+                playerScore++;
+                document.getElementById('playerScore').innerText = playerScore;
+            } else {
+                aiScore++;
+                document.getElementById('aiScore').innerText = aiScore;
+            }
+
+            if (playerScore >= WINNING_SCORE || aiScore >= WINNING_SCORE) {
+                endGame(scorer === 'player');
+            } else {
+                resetPuck(scorer);
+            }
+        }
+
+        function endGame(isPlayerWin) {
+            isGameOver = true;
+            if (isPlayerWin) {
+                sound.playWin();
+                spawnConfetti();
+            }
+
+            let winnerName = isPlayerWin ? 'PLAYER 1' : (gameMode === 'local' ? 'PLAYER 2' : 'AI OPPONENT');
+
+            showPauseModal(
+                `${winnerName} WINS!`,
+                `${winnerName} conquered the Chaminade Cafeteria Arena!`,
+                true
+            );
+        }
+
+        // Confetti FX
+        function spawnConfetti() {
+            particles = [];
+            const colors = ['#800020', '#FFD700', '#ffffff', '#e2e8f0'];
+            for (let i = 0; i < 120; i++) {
+                particles.push({
+                    x: window.innerWidth / 2,
+                    y: window.innerHeight / 2,
+                    vx: (Math.random() - 0.5) * 16,
+                    vy: (Math.random() - 0.7) * 16,
+                    size: Math.random() * 8 + 4,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    rotation: Math.random() * 360,
+                    rotSpeed: (Math.random() - 0.5) * 10
+                });
+            }
+        }
+
+        function renderConfetti() {
+            confettiCtx.clearRect(0, 0, confettiCanvas.width, confettiCanvas.height);
+            particles.forEach((p, idx) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.25;
+                p.rotation += p.rotSpeed;
+
+                confettiCtx.save();
+                confettiCtx.translate(p.x, p.y);
+                confettiCtx.rotate((p.rotation * Math.PI) / 180);
+                confettiCtx.fillStyle = p.color;
+                confettiCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                confettiCtx.restore();
+
+                if (p.y > window.innerHeight) {
+                    particles.splice(idx, 1);
+                }
+            });
+        }
+
+        // --- Interaction Handlers ---
+        function handlePointerMove(clientX, clientY, isSecondary = false) {
+            if (isPaused || isGameOver || !isStarted) return;
+
+            const rect = canvas.getBoundingClientRect();
+            let mouseX = clientX - rect.left;
+            let mouseY = clientY - rect.top;
+
+            if (isSecondary && gameMode === 'local') {
+                // Player 2 Controls Top Half
+                ai.x = Math.max(tableX + ai.radius, Math.min(tableX + tableWidth - ai.radius, mouseX));
+                ai.y = Math.max(tableY + ai.radius, Math.min(canvas.height / 2 - ai.radius, mouseY));
+            } else {
+                // Player 1 Controls Bottom Half
+                player.x = Math.max(tableX + player.radius, Math.min(tableX + tableWidth - player.radius, mouseX));
+                player.y = Math.max(canvas.height / 2 + player.radius, Math.min(tableY + tableHeight - player.radius, mouseY));
+            }
+        }
+
+        canvas.addEventListener('mousemove', (e) => handlePointerMove(e.clientX, e.clientY));
+
+        canvas.addEventListener('touchmove', (e) => {
+            for (let i = 0; i < e.touches.length; i++) {
+                const touch = e.touches[i];
+                const rect = canvas.getBoundingClientRect();
+                const touchY = touch.clientY - rect.top;
+
+                if (gameMode === 'local' && touchY < canvas.height / 2) {
+                    handlePointerMove(touch.clientX, touch.clientY, true);
+                } else {
+                    handlePointerMove(touch.clientX, touch.clientY, false);
+                }
+            }
+            e.preventDefault();
+        }, { passive: false });
+
+        // --- UI Navigation & Modal Management ---
+        const mainMenu = document.getElementById('mainMenu');
+        const diffPanel = document.getElementById('diffPanel');
+        const onlinePanel = document.getElementById('onlinePanel');
+        const howToPanel = document.getElementById('howToPanel');
+        const modalOverlay = document.getElementById('modalOverlay');
+
+        function startMatch(mode, diff = 'easy', code = '') {
+            gameMode = mode;
+            difficulty = diff;
+            roomCode = code;
+
+            playerScore = 0;
+            aiScore = 0;
+            document.getElementById('playerScore').innerText = '0';
+            document.getElementById('aiScore').innerText = '0';
+
+            // HUD Labels setup
+            const labelOpp = document.getElementById('labelScoreOpponent');
+            const hudMode = document.getElementById('hudModeInfo');
+            const hudSub = document.getElementById('hudSubTitle');
+
+            if (gameMode === 'ai') {
+                labelOpp.innerText = 'AI';
+                hudMode.innerText = `1P VS AI • ${difficulty.toUpperCase()}`;
+                hudSub.innerText = 'Cafeteria Arena • Single Player';
+            } else if (gameMode === 'local') {
+                labelOpp.innerText = 'Player 2';
+                hudMode.innerText = 'Local 2P • Pass & Play';
+                hudSub.innerText = 'Cafeteria Arena • Local 2 Player';
+            } else if (gameMode === 'online') {
+                labelOpp.innerText = 'Opponent';
+                hudMode.innerText = `ROOM: ${roomCode}`;
+                hudSub.innerText = `Lobby Code: ${roomCode}`;
+            }
+
+            isStarted = true;
+            isPaused = false;
+            isGameOver = false;
+
+            sound.init();
+            resetPuck('player');
+
+            // Hide all menus
+            mainMenu.classList.add('opacity-0', 'pointer-events-none');
+            diffPanel.classList.add('hidden');
+            onlinePanel.classList.add('hidden');
+            howToPanel.classList.add('hidden');
+            hidePauseModal();
+        }
+
+        function returnToMainMenu() {
+            isStarted = false;
+            isPaused = false;
+            isGameOver = false;
+
+            hidePauseModal();
+            mainMenu.classList.remove('opacity-0', 'pointer-events-none');
+        }
+
+        // Main Menu Buttons
+        document.getElementById('btnMenuSingle').addEventListener('click', () => {
+            diffPanel.classList.remove('hidden');
+        });
+
+        document.getElementById('btnMenuLocal').addEventListener('click', () => {
+            startMatch('local');
+        });
+
+        document.getElementById('btnMenuOnline').addEventListener('click', () => {
+            // Generate random room code
+            const randomCode = 'FLYER' + Math.floor(100 + Math.random() * 900);
+            document.getElementById('generatedRoomCode').innerText = randomCode;
+            roomCode = randomCode;
+            onlinePanel.classList.remove('hidden');
+        });
+
+        document.getElementById('btnMenuHowTo').addEventListener('click', () => {
+            howToPanel.classList.remove('hidden');
+        });
+
+        document.getElementById('btnMenuAudioToggle').addEventListener('click', (e) => {
+            sound.muted = !sound.muted;
+            e.currentTarget.innerHTML = sound.muted 
+                ? '<i class="fas fa-volume-mute text-red-400"></i> Sound: OFF'
+                : '<i class="fas fa-volume-up text-chaminade-gold"></i> Sound: ON';
+        });
+
+        // Difficulty Selector Buttons
+        document.querySelectorAll('.diff-select-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const diff = e.currentTarget.getAttribute('data-diff');
+                startMatch('ai', diff);
+            });
+        });
+
+        document.getElementById('btnCloseDiff').addEventListener('click', () => {
+            diffPanel.classList.add('hidden');
+        });
+
+        // Online Lobby Setup Controls
+        const tabHost = document.getElementById('tabHost');
+        const tabJoin = document.getElementById('tabJoin');
+        const secHost = document.getElementById('secHost');
+        const secJoin = document.getElementById('secJoin');
+
+        tabHost.addEventListener('click', () => {
+            tabHost.className = 'flex-1 py-2 rounded-lg font-bold text-sm bg-chaminade-crimson text-white transition';
+            tabJoin.className = 'flex-1 py-2 rounded-lg font-bold text-sm text-gray-400 hover:text-white transition';
+            secHost.classList.remove('hidden');
+            secJoin.classList.add('hidden');
+        });
+
+        tabJoin.addEventListener('click', () => {
+            tabJoin.className = 'flex-1 py-2 rounded-lg font-bold text-sm bg-chaminade-crimson text-white transition';
+            tabHost.className = 'flex-1 py-2 rounded-lg font-bold text-sm text-gray-400 hover:text-white transition';
+            secJoin.classList.remove('hidden');
+            secHost.classList.add('hidden');
+        });
+
+        document.getElementById('btnHostStart').addEventListener('click', () => {
+            startMatch('online', 'medium', roomCode);
+        });
+
+        document.getElementById('btnJoinStart').addEventListener('click', () => {
+            const inputCode = document.getElementById('inputRoomCode').value.trim().toUpperCase() || 'FLYERS123';
+            startMatch('online', 'medium', inputCode);
+        });
+
+        document.getElementById('btnCloseOnline').addEventListener('click', () => {
+            onlinePanel.classList.add('hidden');
+        });
+
+        document.getElementById('btnCloseHowTo').addEventListener('click', () => {
+            howToPanel.classList.add('hidden');
+        });
+
+        // In-Game Pause Modal Controls
+        function showPauseModal(title, subtitle, isEnding = false) {
+            document.getElementById('modalTitle').innerText = title;
+            document.getElementById('modalSubtitle').innerText = subtitle;
+
+            const resumeBtn = document.getElementById('modalResumeBtn');
+            if (isEnding) {
+                resumeBtn.classList.add('hidden');
+            } else {
+                resumeBtn.classList.remove('hidden');
+            }
+
+            modalOverlay.classList.remove('hidden');
+            modalOverlay.classList.add('flex');
+        }
+
+        function hidePauseModal() {
+            modalOverlay.classList.add('hidden');
+            modalOverlay.classList.remove('flex');
+        }
+
+        document.getElementById('btnPauseHUD').addEventListener('click', () => {
+            if (!isStarted || isGameOver) return;
+            isPaused = true;
+            showPauseModal('MATCH PAUSED', 'Take a breather or head back to the main menu.');
+        });
+
+        document.getElementById('btnSoundHUD').addEventListener('click', (e) => {
+            sound.muted = !sound.muted;
+            const icon = e.currentTarget.querySelector('i');
+            icon.className = sound.muted ? 'fas fa-volume-mute' : 'fas fa-volume-up';
+        });
+
+        document.getElementById('modalResumeBtn').addEventListener('click', () => {
+            isPaused = false;
+            hidePauseModal();
+        });
+
+        document.getElementById('modalRestartBtn').addEventListener('click', () => {
+            startMatch(gameMode, difficulty, roomCode);
+        });
+
+        document.getElementById('modalMenuBtn').addEventListener('click', () => {
+            returnToMainMenu();
+        });
+
+        // --- Render Loop ---
+        function gameLoop() {
+            updatePhysics();
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawCafeteriaBackground();
+            drawAirHockeyTable();
+            drawPuck();
+            drawMallet(ai);
+            drawMallet(player);
+
+            if (particles.length > 0) {
+                renderConfetti();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        window.onload = () => {
+            resizeCanvas();
+            gameLoop();
+        };
+    </script>
+</body>
+</html>
